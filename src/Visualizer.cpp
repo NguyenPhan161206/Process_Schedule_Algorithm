@@ -4,6 +4,7 @@
 #include <queue>
 #include <thread>
 #include <chrono>
+#include <algorithm>
 
 Visualizer::Visualizer(bool en)
     : enabled(en)
@@ -26,11 +27,18 @@ std::string Visualizer::color(const std::string& text, const std::string& ansi_c
 std::string Visualizer::progressBar(int current, int total, int width) const {
     if (total <= 0) total = 1;
     int filled = current * width / total;
-    std::string bar;
+    std::string bar = "[";
     for (int i = 0; i < width; ++i) {
-        bar += (i < filled) ? "█" : "░";
+        bar += (i < filled) ? '#' : '.';
     }
+    bar += "]";
     return bar;
+}
+
+static std::string padTo(int target_width, const std::string& content) {
+    int content_len = static_cast<int>(content.length());
+    int pad = target_width - content_len;
+    return (pad > 0) ? std::string(static_cast<size_t>(pad), ' ') : std::string();
 }
 
 void Visualizer::render(const SystemSnapshot& snap) {
@@ -50,10 +58,12 @@ void Visualizer::render(const SystemSnapshot& snap) {
 
 void Visualizer::printHeader(int time) const {
     std::cout << color(BOLD + "╔══════════════════ OS SCHEDULER SIMULATOR ══════════════════╗", CYAN) << "\n";
-    std::cout << color("║", CYAN)
-              << "  " << BOLD << "⏱ Time: t = " << time << RESET
-              << std::string(42 - std::to_string(time).length() - 9, ' ')
+
+    std::string time_line = "  " + BOLD + "⏱ Time: t = " + std::to_string(time) + RESET;
+    std::cout << color("║", CYAN) << time_line
+              << padTo(56, time_line)
               << color("║", CYAN) << "\n";
+
     std::cout << color("╚══════════════════════════════════════════════════════════════╝", CYAN) << "\n";
 }
 
@@ -64,27 +74,22 @@ void Visualizer::printCPUSection(Process* cpu, int remaining, int total,
     if (cpu != nullptr) {
         int used = total - remaining;
         std::string running_text = "Running: P" + std::to_string(cpu->id);
-        std::string bar = "[" + progressBar(used, total) + "]";
+        std::string bar = progressBar(used, total);
         std::string time_info = std::to_string(used) + "/" + std::to_string(total) + "s";
 
-        std::cout << "│  "
-                  << color(running_text, GREEN)
-                  << "  " << bar << " " << time_info
-                  << std::string(45 - running_text.length() - bar.length() - time_info.length() - 4, ' ')
-                  << "│\n";
+        std::string line = "  " + color(running_text, GREEN) + "  " + bar + " " + time_info;
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     } else {
-        std::cout << "│  " << color("Idle", RED)
-                  << std::string(45, ' ')
-                  << "│\n";
+        std::string line = "  " + color("Idle", RED);
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     }
 
     std::string algo_text = "▸ Algorithm: " + algo;
     if (quantum > 0) {
         algo_text += " (Quantum=" + std::to_string(quantum) + ")";
     }
-    std::cout << "│  " << algo_text
-              << std::string(46 - algo_text.length(), ' ')
-              << "│\n";
+    std::string line = "  " + algo_text;
+    std::cout << "│" << line << padTo(56, line) << "│\n";
 
     std::cout << color("└────────────────────────────────────────────────────────┘", CYAN) << "\n";
 }
@@ -95,18 +100,14 @@ void Visualizer::printResourceSection(Process* res, int remaining, int total) co
     if (res != nullptr) {
         int used = total - remaining;
         std::string running_text = "Running: P" + std::to_string(res->id);
-        std::string bar = "[" + progressBar(used, total) + "]";
+        std::string bar = progressBar(used, total);
         std::string time_info = std::to_string(used) + "/" + std::to_string(total) + "s  (FCFS)";
 
-        std::cout << "│  "
-                  << color(running_text, GREEN)
-                  << "  " << bar << " " << time_info
-                  << std::string(45 - running_text.length() - bar.length() - time_info.length() - 4, ' ')
-                  << "│\n";
+        std::string line = "  " + color(running_text, GREEN) + "  " + bar + " " + time_info;
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     } else {
-        std::cout << "│  " << color("Idle", RED)
-                  << std::string(45, ' ')
-                  << "│\n";
+        std::string line = "  " + color("Idle", RED);
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     }
 
     std::cout << color("└────────────────────────────────────────────────────────┘", CYAN) << "\n";
@@ -116,9 +117,8 @@ void Visualizer::printReadyQueue(const std::deque<Process*>& rq) const {
     std::cout << color("┌─ Ready Queue (CPU) ────────────────────────────────────┐", CYAN) << "\n";
 
     if (rq.empty()) {
-        std::cout << "│  " << color("(empty)", YELLOW)
-                  << std::string(42, ' ')
-                  << "│\n";
+        std::string line = "  " + color("(empty)", YELLOW);
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     } else {
         std::string q_text;
         for (size_t i = 0; i < rq.size(); ++i) {
@@ -126,14 +126,11 @@ void Visualizer::printReadyQueue(const std::deque<Process*>& rq) const {
             q_text += "[P" + std::to_string(rq[i]->id) + "]";
         }
 
-        if (q_text.length() <= 46) {
-            std::cout << "│  " << color(q_text, YELLOW)
-                      << std::string(48 - q_text.length(), ' ')
-                      << "│\n";
-        } else {
-            std::cout << "│  " << color(q_text.substr(0, 44) + "…", YELLOW)
-                      << "  │\n";
+        std::string line = "  " + color(q_text, YELLOW);
+        if (q_text.length() > 50) {
+            line = "  " + color(q_text.substr(0, 48) + "…", YELLOW);
         }
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     }
 
     std::cout << color("└────────────────────────────────────────────────────────┘", CYAN) << "\n";
@@ -143,9 +140,8 @@ void Visualizer::printResourceQueue(const std::queue<Process*>& res_q) const {
     std::cout << color("┌─ Resource Queue (R) ───────────────────────────────────┐", CYAN) << "\n";
 
     if (res_q.empty()) {
-        std::cout << "│  " << color("(empty)", YELLOW)
-                  << std::string(42, ' ')
-                  << "│\n";
+        std::string line = "  " + color("(empty)", YELLOW);
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     } else {
         std::queue<Process*> temp = res_q;
         std::string q_text;
@@ -157,14 +153,11 @@ void Visualizer::printResourceQueue(const std::queue<Process*>& res_q) const {
             first = false;
         }
 
-        if (q_text.length() <= 46) {
-            std::cout << "│  " << color(q_text, YELLOW)
-                      << std::string(48 - q_text.length(), ' ')
-                      << "│\n";
-        } else {
-            std::cout << "│  " << color(q_text.substr(0, 44) + "…", YELLOW)
-                      << "  │\n";
+        std::string line = "  " + color(q_text, YELLOW);
+        if (q_text.length() > 50) {
+            line = "  " + color(q_text.substr(0, 48) + "…", YELLOW);
         }
+        std::cout << "│" << line << padTo(56, line) << "│\n";
     }
 
     std::cout << color("└────────────────────────────────────────────────────────┘", CYAN) << "\n";

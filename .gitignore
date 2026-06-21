@@ -2,4 +2,6 @@ build/
 output/
 scheduler
 scheduler_debug
+sched_debug
 *.o
+out.txt

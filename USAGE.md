@@ -9,7 +9,40 @@ make
 
 Yêu cầu: `g++` hỗ trợ C++17.
 
-## 2. Cú pháp
+---
+
+## 2. Chế độ tương tác (Menu)
+
+Chạy **không tham số** để vào menu:
+
+```bash
+./scheduler
+```
+
+Menu sẽ hiện ra:
+
+```
+╔═══════════════════════════════════════╗
+║  OS SCHEDULER SIMULATOR              ║
+║  Interactive Mode                    ║
+╚═══════════════════════════════════════╝
+
+1) FCFS
+2) Round Robin
+3) SJF
+4) SRTN
+Chon thuat toan [1]:
+File input [test_cases/input_basic.txt]:
+File output [output/gantt.txt]:
+Quantum [2]:
+Bat TUI? (y/N):
+```
+
+Nhấn **Enter** để chọn giá trị mặc định (trong `[ ]`).
+
+---
+
+## 3. Chế độ dòng lệnh (CLI)
 
 ```bash
 ./scheduler <input_file> <output_file> <algorithm_code> [quantum] [--tui]
@@ -21,11 +54,11 @@ Yêu cầu: `g++` hỗ trợ C++17.
 |---------|--------|----------|-------|
 | `input_file` | 1 | ✓ | Đường dẫn file input `.txt` |
 | `output_file` | 2 | ✓ | Đường dẫn file output `.txt` (Gantt chart) |
-| `algorithm_code` | 3 | ✓ | 1=FCFS, 2=RR, 3=SJF, 4=SRTN |
-| `quantum` | 4 | ✗ | Quantum cho RR (mặc định: 2) |
+| `algorithm_code` | 3 | ✓ | `1`=FCFS, `2`=RR, `3`=SJF, `4`=SRTN |
+| `quantum` | 4 | ✗ | Quantum cho RR (mặc định: `2`) |
 | `--tui` | 5 | ✗ | Bật giao diện trực quan trên terminal |
 
-## 3. Ví dụ
+### Ví dụ
 
 ```bash
 # FCFS
@@ -47,6 +80,8 @@ Yêu cầu: `g++` hỗ trợ C++17.
 ./scheduler test_cases/input_basic.txt output/gantt.txt 2 4 --tui
 ```
 
+---
+
 ## 4. Định dạng file input
 
 ```
@@ -54,7 +89,7 @@ Yêu cầu: `g++` hỗ trợ C++17.
 <dòng 2..N+1: arrival_time cpu_burst r_burst cpu_burst r_burst ...>
 ```
 
-### Ví dụ file input (`test_cases/input_basic.txt`):
+### Ví dụ (`test_cases/input_basic.txt`):
 
 ```
 3
@@ -71,16 +106,19 @@ Yêu cầu: `g++` hỗ trợ C++17.
 
 Mỗi dòng: thời gian đến, sau đó là các cặp `(CPU burst, R burst)` lặp lại.
 
+---
+
 ## 5. Định dạng file output
 
 **Dòng 1:** Biểu đồ Gantt CPU (số = process ID, `_` = idle)  
 **Dòng 2:** Biểu đồ Gantt tài nguyên R
 
-Ví dụ:
 ```
 1 1 1 1 1 2 2 2 2 3 3 3 1 1 3 3 _ _
 _ _ _ _ _ 1 1 1 _ 2 2 _ 3 _ 1 1 3 _
 ```
+
+---
 
 ## 6. Đầu ra báo cáo Analytics
 
@@ -108,39 +146,74 @@ Sau khi chạy, chương trình tự động in bảng thống kê hiệu năng:
 ╚═══════════════════════════════════════════════════════════════╝
 ```
 
-Các chỉ số:
-- **Response Time:** Thời gian từ lúc đến đến lần đầu CPU xử lý
-- **Waiting Time:** Tổng thời gian chờ trong Ready Queue
-- **Turnaround Time:** Tổng thời gian từ lúc đến đến khi hoàn thành
-- **CPU Utilization %:** Phần trăm thời gian CPU hoạt động
-- **Resource Utilization %:** Phần trăm thời gian tài nguyên R hoạt động
+### Các chỉ số
 
-## 7. Các file test có sẵn
+| Chỉ số | Ý nghĩa |
+|--------|---------|
+| **Response Time** | Thời gian từ lúc đến → lần đầu CPU xử lý |
+| **Waiting Time** | Tổng thời gian chờ trong Ready Queue |
+| **Turnaround Time** | Thời gian từ lúc đến → hoàn thành toàn bộ |
+| **CPU Utilization** | % thời gian CPU hoạt động (không idle) |
+| **Resource Utilization** | % thời gian tài nguyên R hoạt động |
+
+---
+
+## 7. Tình huống mô phỏng (thuật toán)
+
+| Thuật toán | Mã | Đặc điểm |
+|-----------|-----|---------|
+| **FCFS** | `1` | Non-preemptive, chọn process đến trước |
+| **RR** | `2` | Preemptive theo quantum, mặc định `q=2` |
+| **SJF** | `3` | Non-preemptive, chọn CPU burst ngắn nhất |
+| **SRTN** | `4` | Preemptive, chọn remaining time ngắn nhất |
+
+### Quy tắc mô phỏng
+- **Resource R** hoạt động độc lập với CPU, điều phối theo **FCFS**
+- Khi có **process mới đến** và **process từ R quay về** cùng lúc → **process mới được ưu tiên** xếp trước trong Ready Queue
+
+---
+
+## 8. Các file test có sẵn
 
 | File | Mô tả |
 |------|-------|
 | `test_cases/input_basic.txt` | 3 process, burst CPU/R xen kẽ |
 | `test_cases/input_simple.txt` | 2 process, chỉ CPU, không có R |
 | `test_cases/input_fcfs.txt` | Test cho FCFS |
-| `test_cases/input_rr.txt` | Test cho RR (cùng thời điểm arrival) |
+| `test_cases/input_rr.txt` | Test cho RR (cùng arrival time) |
 | `test_cases/input_sjf.txt` | Test cho SJF |
 | `test_cases/input_srtn.txt` | Test cho SRTN |
 
-## 8. Kiến trúc project
+---
+
+## 9. Kiến trúc project
 
 ```
 OS_Scheduler_Project/
 ├── Makefile                # Build script
+├── USAGE.md                # Hướng dẫn sử dụng
+│
 ├── include/                # Header files (.hpp)
 │   ├── Process.hpp         # Cấu trúc tiến trình và TaskBurst
 │   ├── Parser.hpp          # Đọc/ghi file input/output
 │   ├── Resource.hpp        # Quản lý tài nguyên R
 │   ├── ISchedulingAlgorithm.hpp  # Interface Strategy Pattern
-│   ├── Algorithms.hpp      # 4 thuật toán lập lịch
-│   ├── Scheduler.hpp       # Bộ điều phối trung tâm
-│   ├── Visualizer.hpp      # Giao diện TUI
+│   ├── Algorithms.hpp      # 4 thuật toán lập lịch (FCFS, RR, SJF, SRTN)
+│   ├── Scheduler.hpp       # Bộ điều phối trung tâm (vòng lặp mô phỏng)
+│   ├── Visualizer.hpp      # Giao diện TUI (ANSI colors)
 │   └── Analytics.hpp       # Báo cáo hiệu năng
+│
 ├── src/                    # Source files (.cpp)
-├── test_cases/             # File input mẫu
-└── output/                 # File kết quả Gantt
+│   ├── main.cpp            # Entry point + interactive menu
+│   ├── Process.cpp
+│   ├── Parser.cpp
+│   ├── Resource.cpp
+│   ├── ISchedulingAlgorithm.cpp
+│   ├── Algorithms.cpp
+│   ├── Scheduler.cpp
+│   ├── Visualizer.cpp
+│   └── Analytics.cpp
+│
+├── test_cases/             # File input mẫu (.txt)
+└── output/                 # File kết quả Gantt (.txt)
 ```

@@ -154,7 +154,9 @@ int main(int argc, char* argv[]) {
                         scheduler.total_simulation_time,
                         scheduler.total_cpu_idle_time,
                         scheduler.resource.total_idle_time,
-                        algo_name, analytics_quantum);
+                        algo_name, analytics_quantum,
+                        scheduler.cpu_gantt,
+                        scheduler.resource.gantt_history);
     analytics.printReport();
 
     delete algo;

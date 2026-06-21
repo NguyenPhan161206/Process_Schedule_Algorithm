@@ -2,14 +2,19 @@
 #include <iostream>
 #include <iomanip>
 #include <cmath>
+#include <algorithm>
 
 Analytics::Analytics(const std::vector<Process>& procs,
                      int sim_time,
                      int cpu_idle,
                      int res_idle,
                      const std::string& algo,
-                     int q)
+                     int q,
+                     const std::vector<int>& cpu_g,
+                     const std::vector<int>& res_g)
     : processes(procs)
+    , cpu_gantt(cpu_g)
+    , res_gantt(res_g)
     , total_simulation_time(sim_time)
     , total_cpu_idle_time(cpu_idle)
     , total_res_idle_time(res_idle)
@@ -63,6 +68,49 @@ SystemMetrics Analytics::calculateSystemMetrics(const std::vector<ProcessMetrics
     }
 
     return sm;
+}
+
+void Analytics::printGanttChart() {
+    if (cpu_gantt.empty()) return;
+
+    const std::string B = "\033[1m";
+    const std::string G = "\033[32m";
+    const std::string RR = "\033[31m";
+    const std::string N = "\033[0m";
+
+    const int COLS_PER_LINE = 30;
+    int total = static_cast<int>(cpu_gantt.size());
+
+    auto printRow = [&](const std::vector<int>& data, const std::string& label) {
+        for (int start = 0; start < total; start += COLS_PER_LINE) {
+            int end = std::min(start + COLS_PER_LINE, total);
+
+            if (start == 0) {
+                std::cout << B << label << " Gantt:" << N << "\n";
+            }
+
+            std::cout << "  ";
+            for (int i = start; i < end; ++i) {
+                std::string t = std::to_string(i);
+                std::cout << (t.length() == 1 ? " " + t + " " : t + " ");
+            }
+            std::cout << "\n";
+
+            std::cout << "  ";
+            for (int i = start; i < end; ++i) {
+                if (data[i] == -1) {
+                    std::cout << RR << " _ " << N;
+                } else {
+                    std::string id = std::to_string(data[i]);
+                    std::cout << G << (id.length() == 1 ? " " + id + " " : id + " ") << N;
+                }
+            }
+            std::cout << "\n\n";
+        }
+    };
+
+    printRow(cpu_gantt, "CPU");
+    printRow(res_gantt, "R");
 }
 
 void Analytics::printReport() {
@@ -156,4 +204,7 @@ void Analytics::printReport() {
               << std::string(14, ' ') << H << "║" << R << "\n";
 
     std::cout << H << "╚══════════════════════════════════════════════════════════════╝" << R << "\n";
+
+    std::cout << "\n";
+    printGanttChart();
 }

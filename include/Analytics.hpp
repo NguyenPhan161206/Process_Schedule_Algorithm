@@ -23,6 +23,8 @@ struct SystemMetrics {
 class Analytics {
 public:
     std::vector<Process> processes;
+    std::vector<int> cpu_gantt;
+    std::vector<int> res_gantt;
     int total_simulation_time;
     int total_cpu_idle_time;
     int total_res_idle_time;
@@ -34,11 +36,14 @@ public:
               int cpu_idle,
               int res_idle,
               const std::string& algo,
-              int q);
+              int q,
+              const std::vector<int>& cpu_g,
+              const std::vector<int>& res_g);
 
     std::vector<ProcessMetrics> calculateProcessMetrics();
     SystemMetrics calculateSystemMetrics(const std::vector<ProcessMetrics>& pm);
     void printReport();
+    void printGanttChart();
 };
 
 #endif

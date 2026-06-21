@@ -1,0 +1,5 @@
+build/
+output/
+scheduler
+scheduler_debug
+*.o

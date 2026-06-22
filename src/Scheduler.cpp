@@ -35,23 +35,23 @@ void Scheduler::runSimulation() {
         // 1. New arrivals at current_time
         handleNewArrivals();
 
-        // 2. Process CPU execution
-        processCPU();
-
-        // 3. Process Resource
+        // 2. Process Resource
         processResource();
 
-        // 4. Conflict resolution: merge arrivals and R returnees into ready_queue
+        // 3. Conflict resolution: merge arrivals and R returnees into ready_queue
         resolveConflict();
 
-        // 5. SRTN preemption check
+        // 4. SRTN preemption check
         checkSRTNPreemption();
 
-        // 6. Pick next CPU process if idle
+        // 5. Pick next CPU process if idle
         pickNextCPUProcess();
 
-        // 7. Record Gantt for this tick
+        // 6. Record Gantt for this tick
         recordGantt();
+
+        // 7. Process CPU execution
+        processCPU();
 
         // 8. Notify Visualizer
         notifyVisualizer();
@@ -97,7 +97,7 @@ void Scheduler::processCPU() {
         cpu_current->advanceBurst();
 
         if (cpu_current->isFinished()) {
-            cpu_current->markCompletion(current_time);
+            cpu_current->markCompletion(current_time + 1);
             cpu_current = nullptr;
         } else {
             // Next burst is RESOURCE → send to Resource
@@ -147,7 +147,7 @@ void Scheduler::checkSRTNPreemption() {
     if (!is_srtn || cpu_current == nullptr) return;
     if (ready_queue.empty()) return;
 
-    int current_remaining = cpu_current->getCurrentBurst().remaining;
+    int current_remaining = cpu_current->getRemainingCPUTotal();
     for (auto* p : ready_queue) {
         if (p->getRemainingCPUTotal() < current_remaining) {
             // Preempt current process

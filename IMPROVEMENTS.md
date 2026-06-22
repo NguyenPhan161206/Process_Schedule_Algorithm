@@ -2,64 +2,66 @@
 
 ## 🐛 Bugs (HIGH)
 
-### BUG-1: Off-by-one CPU burst accounting
+### ~~BUG-1: Off-by-one CPU burst accounting~~ ✅ FIXED
 **File:** `src/Scheduler.cpp:30-71, 85-120`
 
-**Vấn đề:** Trong `runSimulation()`, `processCPU()` được gọi *trước* `pickNextCPUProcess()`. Ở tick đầu tiên (`t=0`), chưa có process nào trên CPU → `processCPU()` không làm gì. Sau đó `pickNextCPUProcess()` chọn process và gán vào CPU, nhưng burst không được decrement cho tick đó. Process đầu tiên luôn nhận +1 tick CPU so với burst được cấu hình.
-
-**Hậu quả:** Mọi process bị sai số liệu CPU time +1.
-
-**Fix:** Chuyển `processCPU()` xuống *sau* `pickNextCPUProcess()` trong loop, hoặc restructure loop.
+**Fix:** Reorder simulation loop: `processCPU()` moved after `recordGantt()` so burst is decremented from tick 0. Also fixed `markCompletion(current_time)` → `current_time + 1` for consistency.
 
 ---
 
-### BUG-2: SRTN preemption so sánh sai đại lượng
+### ~~BUG-2: SRTN preemption so sánh sai đại lượng~~ ✅ FIXED
 **File:** `src/Scheduler.cpp:146-159`
 
-```cpp
-int current_remaining = cpu_current->getCurrentBurst().remaining; // chỉ burst hiện tại
-// so sánh với:
-p->getRemainingCPUTotal() // tổng tất cả CPU burst còn lại
-```
-
-**Vấn đề:** So sánh `remaining của 1 burst` với `tổng remaining của nhiều burst` — không cùng đơn vị.
-
-**Fix:** Đổi `cpu_current->getCurrentBurst().remaining` thành `cpu_current->getRemainingCPUTotal()`.
+**Fix:** Changed `getCurrentBurst().remaining` → `getRemainingCPUTotal()` so preemption compares total remaining CPU time, not just current burst.
 
 ---
 
-### BUG-3: markCompletion không đồng nhất
+### ~~BUG-3: markCompletion không đồng nhất~~ ✅ FIXED
 **File:** `src/Scheduler.cpp:100, 127`
 
-| Đường dẫn | `markCompletion` |
-|-----------|-----------------|
-| Kết thúc bằng CPU burst | `markCompletion(current_time)` |
-| Kết thúc bằng Resource burst | `markCompletion(current_time + 1)` |
-
-**Fix:** Thống nhất convention — khuyến nghị dùng `current_time` cho cả hai.
+**Fix:** Both CPU and Resource paths now use `markCompletion(current_time + 1)`.
 
 ---
 
-### BUG-4: Quantum RR bị +1 tick
+### ~~BUG-4: Quantum RR bị +1 tick~~ ✅ FIXED
 **File:** `src/Scheduler.cpp:91-93, 115-119, 174-175`
 
-**Nguyên nhân:** Hậu quả của BUG-1. Quantum counter được reset trong `pickNextCPUProcess()` nhưng tick đầu tiên không chạy `processCPU()` → process mới hưởng 1 tick free trước khi counter bắt đầu đếm. Với `quantum=2`, process chạy 3 ticks thay vì 2.
+**Note:** Side effect of BUG-1. Automatically resolved when loop was reordered.
 
 ---
 
 ### BUG-5: Simulation termination thừa 1 tick idle
-**File:** `src/Scheduler.cpp:65-73, 211-222`
+**File:** `src/Scheduler.cpp:64-73, 211-222`
 
-**Vấn đề:** `isSimulationFinished()` được kiểm tra *sau* record Gantt nhưng *trước* `++current_time`. Nếu tick cuối làm simulation finished, `++current_time` vẫn chạy → `total_simulation_time` nhiều hơn số tick thực tế 1 đơn vị, thêm 1 tick idle vào Gantt.
+**Status:** ✅ FIXED
+
+**Vấn đề:** `isSimulationFinished()` được kiểm tra *sau* `recordGantt()`. Khi tick cuối mọi process kết thúc, idle tick tiếp theo vẫn được ghi vào Gantt trước khi loop break.
+
+**Fix:** Chuyển `isSimulationFinished()` lên đầu loop, `total_simulation_time = current_time` (bỏ `+1`).
 
 ---
 
 ### BUG-8: Memory leak trên error path
 **File:** `src/main.cpp:144-150, 162`
 
+**Status:** ✅ FIXED
+
 **Vấn đề:** `algo` được `new` nhưng nếu `Parser::writeOutput()` throw, `delete algo` bị skip.
 
-**Fix:** Dùng `std::unique_ptr<ISchedulingAlgorithm>`.
+**Fix:** Dùng `std::unique_ptr<ISchedulingAlgorithm>` thay `new`/`delete`.
+
+---
+
+### BUG-R1: Resource off-by-one (phát hiện mới)
+**File:** `src/Resource.cpp:14-40`
+
+**Status:** ✅ FIXED
+
+**Vấn đề:** Resource có 2 lỗi giống BUG-1 cũ:
+1. Process mới lên R không được decrement trong tick đầu (start nhưng không chạy)
+2. Khi process kết thúc trên R, gantt ghi idle thay vì ghi process (vì gantt push sau khi `current_user` đã set null)
+
+**Fix:** Chuyển `gantt_history.push_back()` và `++total_idle_time` lên trước block xử lý decrement và start, ghi nhận trạng thái đầu tick.
 
 ---
 
@@ -116,6 +118,8 @@ p->getRemainingCPUTotal() // tổng tất cả CPU burst còn lại
 ### CQ-1: Dùng `unique_ptr` thay `new`/`delete`
 **File:** `src/main.cpp`
 
+**Status:** ✅ FIXED (cùng BUG-8)
+
 ### CQ-2: Encapsulation
 **File:** `include/*.hpp`
 
@@ -171,18 +175,3 @@ Hiện tại không xử lý `--help` hay `-h`.
 ## ⚡ Performance
 
 Không có vấn đề performance nghiêm trọng. Có thể optimize phần `Visualizer::render()` nếu simulation rất dài (>10k ticks) nhưng không cần thiết cho mục đích học thuật.
-
----
-
-## 📋 Ưu tiên đề xuất
-
-| Thứ tự | Item | Effort | Impact |
-|--------|------|--------|--------|
-| 1 | BUG-1 + BUG-4 (off-by-one burst/quantum) | 1-2h | 🔴 Cao |
-| 2 | BUG-2 (SRTN sai comparison) | 30m | 🔴 Cao |
-| 3 | BUG-3 (markCompletion không đồng nhất) | 15m | 🟡 Trung bình |
-| 4 | BUG-8 (memory leak) | 15m | 🟡 Trung bình |
-| 5 | Thêm MLFQ | 4-6h | 🟢 Thấp |
-| 6 | Thêm `--batch` + CSV export | 2-3h | 🟢 Thấp |
-| 7 | TUI step mode | 1-2h | 🟢 Thấp |
-| 8 | Code quality (encapsulation, smart pointers, ...) | 3-4h | 🟢 Thấp |

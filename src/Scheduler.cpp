@@ -29,6 +29,9 @@ void Scheduler::setVisualizer(Visualizer* vis) {
 
 void Scheduler::runSimulation() {
     while (true) {
+        // Check termination at start of each tick
+        if (isSimulationFinished()) break;
+
         arrivals_this_tick.clear();
         r_returnees_this_tick.clear();
 
@@ -61,16 +64,11 @@ void Scheduler::runSimulation() {
             p->addWaitingTime(1);
         }
 
-        // 10. Check termination
-        if (isSimulationFinished()) {
-            break;
-        }
-
-        // 11. Advance time
+        // 10. Advance time
         ++current_time;
     }
 
-    total_simulation_time = current_time + 1;
+    total_simulation_time = current_time;
 }
 
 void Scheduler::handleNewArrivals() {

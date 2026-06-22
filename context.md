@@ -47,20 +47,39 @@ include/
   Visualizer.hpp       - TUI (ANSI colors)
   Analytics.hpp        - Báo cáo hiệu năng
 src/
-  main.cpp             - Entry point + menu
+  main.cpp             - Entry point + menu (dùng unique_ptr)
   ...
 test_cases/
   input_basic.txt, input_simple.txt, input_fcfs.txt,
-  input_rr.txt, input_sjf.txt, input_srtn.txt
+  input_rr.txt, input_sjf.txt, input_srtn.txt,
+  input_bug2_srtn.txt  (test cho BUG-2)
 ```
 
-## Các bugs đã xác định (IMPROVEMENTS.md)
+## Vòng lặp mô phỏng (sau tất cả fixes)
 
-| Bug | Mô tả | Severity |
-|-----|-------|----------|
-| BUG-1 | Off-by-one CPU burst (processCPU trước pickNextCPUProcess) | 🔴 Cao |
-| BUG-2 | SRTN so sánh currentBurst.remaining vs getRemainingCPUTotal() | 🔴 Cao |
-| BUG-3 | markCompletion không đồng nhất (current_time vs +1) | 🟡 Trung |
-| BUG-4 | Quantum RR +1 tick (do BUG-1) | 🔴 Cao |
-| BUG-5 | Simulation termination thừa 1 tick idle | 🟡 Trung |
-| BUG-8 | Memory leak khi writeOutput throw | 🟡 Trung |
+```
+while true:
+  if isSimulationFinished() → break
+  handleNewArrivals
+  processResource       (gantt/idle ghi trước decrement/start)
+  resolveConflict
+  checkSRTNPreemption   (so sánh total remaining CPU time)
+  pickNextCPUProcess
+  recordGantt           (ghi trạng thái CPU đầu tick)
+  processCPU            (decrement burst)
+  notifyVisualizer
+  addWaitingTime
+  ++current_time
+```
+
+## Các bugs đã fix
+
+| Bug | Mô tả | Fix |
+|-----|-------|-----|
+| **BUG-1** | CPU off-by-one (processCPU trước pickNextCPUProcess) | Reorder loop, markCompletion(current_time+1) |
+| **BUG-2** | SRTN so sánh currentBurst vs totalRemaining | `getRemainingCPUTotal()` cho cả 2 vế |
+| **BUG-3** | markCompletion không đồng nhất | Cả CPU và Resource đều dùng `current_time + 1` |
+| **BUG-4** | Quantum RR +1 tick | Tự động fix cùng BUG-1 |
+| **BUG-5** | Thừa 1 tick idle cuối | Move isSimulationFinished lên đầu loop |
+| **BUG-8** | Memory leak | `std::unique_ptr` thay `new`/`delete` |
+| **BUG-R1** | Resource off-by-one (start không decrement, gantt sai tick cuối) | Ghi gantt/idle trước decrement/start |

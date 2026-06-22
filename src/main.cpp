@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string>
 #include <cstring>
+#include <memory>
 #include "Parser.hpp"
 #include "Scheduler.hpp"
 #include "Algorithms.hpp"
@@ -112,30 +113,30 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    ISchedulingAlgorithm* algo = nullptr;
+    std::unique_ptr<ISchedulingAlgorithm> algo;
     std::string algo_name;
     switch (algo_code) {
         case 1:
-            algo = new FCFSScheduler();
+            algo = std::make_unique<FCFSScheduler>();
             algo_name = "FCFS";
             break;
         case 2:
-            algo = new RoundRobinScheduler(quantum);
+            algo = std::make_unique<RoundRobinScheduler>(quantum);
             algo_name = "Round Robin";
             break;
         case 3:
-            algo = new SJFScheduler();
+            algo = std::make_unique<SJFScheduler>();
             algo_name = "SJF";
             break;
         case 4:
-            algo = new SRTNScheduler();
+            algo = std::make_unique<SRTNScheduler>();
             algo_name = "SRTN";
             break;
     }
 
     Visualizer visualizer(tui_mode);
 
-    Scheduler scheduler(processes, algo);
+    Scheduler scheduler(processes, algo.get());
     scheduler.algo_name = algo_name;
     scheduler.setVisualizer(&visualizer);
 
@@ -145,7 +146,6 @@ int main(int argc, char* argv[]) {
         Parser::writeOutput(output_path, scheduler.cpu_gantt, scheduler.resource.gantt_history);
     } catch (const std::exception& e) {
         std::cerr << "Error writing output: " << e.what() << std::endl;
-        delete algo;
         return 1;
     }
 
@@ -159,6 +159,5 @@ int main(int argc, char* argv[]) {
                         scheduler.resource.gantt_history);
     analytics.printReport();
 
-    delete algo;
     return 0;
 }

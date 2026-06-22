@@ -12,6 +12,10 @@ void Resource::addRequest(Process* p) {
 }
 
 void Resource::tick() {
+    // Record gantt and idle based on state at START of this tick
+    gantt_history.push_back(is_busy ? current_user->id : -1);
+    if (!is_busy) ++total_idle_time;
+
     if (is_busy) {
         --remaining_time;
         --current_user->getCurrentBurst().remaining;
@@ -31,12 +35,6 @@ void Resource::tick() {
         current_user->getCurrentBurst().remaining = remaining_time;
         is_busy = true;
     }
-
-    if (!is_busy) {
-        ++total_idle_time;
-    }
-
-    gantt_history.push_back(is_busy ? current_user->id : -1);
 }
 
 Process* Resource::popReleased() {

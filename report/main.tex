@@ -1,0 +1,92 @@
+\documentclass[a4paper,12pt]{report}
+
+\usepackage[utf8]{vietnam}
+
+\usepackage{amsmath}
+\usepackage{geometry}
+\geometry{
+    top=2.5cm,
+    bottom=2.5cm,
+    left=3cm,
+    right=2cm,
+}
+
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    urlcolor=blue,
+    citecolor=blue,
+}
+
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows, positioning, fit, backgrounds, calc}
+
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{multirow}
+\usepackage{verbatim}
+
+\usepackage{listings}
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    tabsize=4,
+    numbers=left,
+    numberstyle=\tiny,
+    frame=single,
+    language=C++,
+    keywordstyle=\color{blue}\bfseries,
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+}
+
+\usepackage{titlesec}
+\titleformat{\chapter}[display]
+  {\bfseries\Large}
+  {\chaptername\ \thechapter}
+  {20pt}{\Huge}
+
+\usepackage{fancyhdr}
+\setlength{\headheight}{18pt}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\leftmark}
+\fancyhead[R]{\thepage}
+\fancyfoot[C]{}
+\renewcommand{\headrulewidth}{0.4pt}
+
+\usepackage{tocloft}
+\renewcommand{\cfttoctitlefont}{\huge\bfseries}
+
+\newcommand{\code}[1]{\texttt{\hyphenchar\font=45\relax#1}}
+
+\begin{document}
+
+\input{chapters/cover.tex}
+
+\pagenumbering{roman}
+\tableofcontents
+\newpage
+
+\listoffigures
+\newpage
+
+\listoftables
+\newpage
+
+\pagenumbering{arabic}
+
+\input{chapters/ch1_overview.tex}
+\input{chapters/ch2_theory.tex}
+\input{chapters/ch3_design.tex}
+\input{chapters/ch4_implementation.tex}
+\input{chapters/ch5_results.tex}
+\input{chapters/ch6_conclusion.tex}
+\input{chapters/refs.tex}
+\input{chapters/appendix.tex}
+
+\end{document}

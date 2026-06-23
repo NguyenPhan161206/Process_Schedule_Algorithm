@@ -1,0 +1,244 @@
+\chapter{Giải thích cài đặt}
+
+\section{Entry point -- \texttt{main.cpp}}
+
+File \code{src/main.cpp} là điểm vào của chương trình. Nó xử lý tham số dòng lệnh (hoặc hiển thị menu tương tác), khởi tạo các đối tượng và điều phối luồng chạy.
+
+\begin{lstlisting}
+int main(int argc, char* argv[]) {
+    // Xu ly tham so dong lenh hoac menu
+    if (argc > 1) {
+        // CLI mode: <input> <output> <algo> [quantum] [--tui]
+    } else {
+        // Interactive menu mode
+    }
+    
+    // Doc input
+    auto processes = Parser::parseInput(input_path);
+    
+    // Tao thuat toan (unique_ptr)
+    std::unique_ptr<ISchedulingAlgorithm> algo;
+    switch (algo_code) {
+        case 1: algo = std::make_unique<FCFSScheduler>(); break;
+        case 2: algo = std::make_unique<RoundRobinScheduler>(quantum); break;
+        case 3: algo = std::make_unique<SJFScheduler>(); break;
+        case 4: algo = std::make_unique<SRTNScheduler>(); break;
+    }
+    
+    // Khoi tao Scheduler va chay mo phong
+    Scheduler scheduler(processes, algo.get());
+    scheduler.runSimulation();
+    
+    // Ghi output va in analytics
+    Parser::writeOutput(cpu_gantt, res_gantt, output_path);
+    Analytics analytics(...);
+    analytics.printReport();
+}
+\end{lstlisting}
+
+Điểm đáng chú ý là việc sử dụng \code{std::unique\_ptr} thay vì \code{new}/\code{delete} để quản lý bộ nhớ cho đối tượng thuật toán. Điều này đảm bảo không rò rỉ bộ nhớ ngay cả khi ngoại lệ xảy ra (bug BUG-8 đã được sửa).
+
+\section{Vòng lặp mô phỏng chính -- \texttt{runSimulation()}}
+
+Đây là trái tim của chương trình. Mỗi tick (một đơn vị thời gian), vòng lặp thực hiện 10 bước theo thứ tự nghiêm ngặt.
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.7cm, scale=0.75, transform shape]
+\tikzstyle{startstop}=[ellipse, draw, fill=red!20, minimum width=1.8cm, minimum height=0.8cm, align=center]
+\tikzstyle{process}=[rectangle, draw, fill=blue!15, minimum width=5cm, minimum height=0.8cm, rounded corners, align=center]
+\tikzstyle{decision}=[diamond, draw, fill=yellow!20, minimum width=2cm, minimum height=1.2cm, aspect=2, align=center, text width=2cm]
+\tikzstyle{arrow}=[->, thick]
+
+\node[startstop] (start) {Start};
+\node[decision, below=1.2cm of start] (finished) {isSimulation\\ Finished?};
+\node[process, below=1.5cm of finished] (arrivals) {handleNewArrivals()};
+\node[process, below=0.5cm of arrivals] (resource) {processResource()};
+\node[process, below=0.5cm of resource] (conflict) {resolveConflict()};
+\node[decision, right=4cm of finished] (srtn) {Algorithm\\ == SRTN?};
+\node[process, below=1.5cm of srtn] (checkPreempt) {checkSRTN\\ Preemption()};
+\node[process, below=0.5cm of checkPreempt] (pickNext) {pickNextCPU\\ Process()};
+\node[process, below=0.5cm of pickNext] (gantt) {recordGantt()};
+\node[process, below=0.5cm of gantt] (cpu) {processCPU()};
+\node[process, below=0.5cm of cpu] (visual) {notifyVisualizer()};
+\node[process, below=0.5cm of visual] (wait) {addWaitingTime()};
+\node[process, below=0.5cm of wait] (tick) {++current\_time};
+\node[startstop, below=0.8cm of tick] (end) {End};
+
+\draw[arrow] (start) -- (finished);
+\draw[arrow] (finished.west) -- ++(-1.5,0) node[above, font=\tiny] {No} |- (arrivals.west);
+\draw[arrow] (arrivals) -- (resource);
+\draw[arrow] (resource) -- (conflict);
+\draw[arrow] (conflict) -| (srtn);
+\draw[arrow] (srtn.south) -- node[right, font=\tiny] {Yes} (checkPreempt);
+\draw[arrow] (checkPreempt) -- (pickNext);
+\draw[arrow] (srtn.west) -- ++(-1,0) node[above, font=\tiny] {No} |- (pickNext);
+\draw[arrow] (pickNext) -- (gantt);
+\draw[arrow] (gantt) -- (cpu);
+\draw[arrow] (cpu) -- (visual);
+\draw[arrow] (visual) -- (wait);
+\draw[arrow] (wait) -- (tick);
+\draw[arrow] (tick) -- (finished.west-|tick.west) -- (finished.west);
+\draw[arrow] (finished) -- node[right, font=\tiny] {Yes} ++(0,-1.2) -| (end);
+
+\end{tikzpicture}
+\caption{Flowchart vòng lặp mô phỏng chính}
+\label{fig:sim-loop}
+\end{figure}
+
+\subsection{Chi tiết từng bước}
+
+\begin{enumerate}
+    \item \textbf{isSimulationFinished():} Kiểm tra điều kiện dừng -- CPU idle, ready queue rỗng, resource idle, resource queue rỗng, và tất cả tiến trình đã kết thúc.
+    
+    \item \textbf{handleNewArrivals():} Duyệt danh sách tiến trình, đưa các tiến trình có\\ \phantom{\textbf{handleNewArrivals():}} \code{arrival\_time == current\_time} vào hàng đợi arrivals tạm thời.
+    
+    \item \textbf{processResource():} Gọi \code{Resource::tick()} -- ghi nhận trạng thái resource vào Gantt, decrement burst nếu đang chạy, xử lý hoàn thành, và khởi động tiến trình mới từ hàng đợi nếu resource rảnh. Sau đó đưa các tiến trình vừa hoàn thành Resource burst vào hàng đợi return.
+    
+    \item \textbf{resolveConflict():} Đưa tiến trình arrivals vào ready queue trước, sau đó đến tiến trình từ resource return. \textbf{Tiến trình mới đến được ưu tiên trước.}
+    
+    \item \textbf{checkSRTNPreemption():} Chỉ áp dụng với SRTN. Nếu có tiến trình trong ready queue có tổng CPU còn lại nhỏ hơn tiến trình đang chạy, tiến trình đang chạy bị preempt.
+    
+    \item \textbf{pickNextCPUProcess():} Nếu CPU rảnh và ready queue không rỗng, gọi\\ \phantom{\textbf{pickNextCPUProcess():}} \code{algorithm->pickNext()} để chọn tiến trình tiếp theo.
+    
+    \item \textbf{recordGantt():} Ghi PID của tiến trình đang chạy (hoặc -1 nếu idle) vào \code{cpu\_gantt}.
+    
+    \item \textbf{processCPU():} Decrement burst của tiến trình đang chạy. Xử lý hoàn thành burst (chuyển sang R hoặc kết thúc), hoặc preemption do hết quantum RR.
+    
+    \item \textbf{notifyVisualizer():} Nếu bật TUI, gửi snapshot trạng thái đến Visualizer.
+    
+    \item \textbf{addWaitingTime():} Mỗi tiến trình trong ready queue được tăng waiting time thêm 1.
+\end{enumerate}
+
+\section{Cơ chế hoạt động của Resource}
+
+\begin{lstlisting}[caption={Resource::tick() -- xu\^at Gantt truoc decrement}]
+void Resource::tick() {
+    // Buoc 1: Ghi nhan trang thai vao Gantt (dau tick)
+    gantt_history.push_back(current_user ? current_user->id : -1);
+    if (!is_busy) ++total_idle_time;
+    
+    // Buoc 2: Decrement neu dang chay
+    if (is_busy) {
+        --remaining_time;
+        --current_user->getCurrentBurst().remaining;
+    }
+    
+    // Buoc 3: Ket thuc burst
+    if (is_busy && remaining_time <= 0) {
+        current_user->advanceBurst();
+        released_queue.push(current_user);
+        current_user = nullptr;
+        is_busy = false;
+    }
+    
+    // Buoc 4: Khoi dong tien trinh moi tu hang doi
+    if (!is_busy && !res_queue.empty()) {
+        current_user = res_queue.front();
+        res_queue.pop();
+        remaining_time = current_user->getCurrentBurst().remaining;
+        is_busy = true;
+    }
+}
+\end{lstlisting}
+
+Thứ tự các bước trong \code{tick()} rất quan trọng. Gantt được ghi ở \textbf{đầu tick} (trước decrement) để phản ánh đúng trạng thái của tick đó. Đây là kết quả sửa lỗi BUG-R1.
+
+\subsection{Xử lý hoàn thành Resource burst}
+
+Khi một tiến trình hoàn thành Resource burst, nó được đưa vào \code{released\_queue}. Scheduler sau đó sẽ đưa tiến trình này trở lại ready queue:
+\begin{itemize}
+    \item Nếu tiến trình đã hoàn thành tất cả các burst (CPU và R): gọi \linebreak[4]\code{markCompletion(current\_time + 1)}.
+    \item Nếu còn burst: đưa vào ready queue thông qua \code{r\_returnees\_this\_tick}.
+\end{itemize}
+
+\section{Cơ chế Preemption}
+
+\subsection{Preemption trong Round Robin}
+
+Preemption RR được xử lý trong \code{processCPU()}:
+
+\begin{lstlisting}
+void Scheduler::processCPU() {
+    if (!cpu_current) return;
+    
+    --cpu_current_burst_remaining;
+    --cpu_current->getCurrentBurst().remaining;
+    
+    if (cpu_algorithm == ROUND_ROBIN) --cpu_rr_quantum_counter;
+    
+    // 1. Hoan thanh burst
+    if (cpu_current_burst_remaining <= 0) {
+        cpu_current->advanceBurst();
+        if (cpu_current->isFinished()) {
+            cpu_current->markCompletion(current_time + 1);
+        } else {
+            resource.addRequest(cpu_current);
+        }
+        cpu_current = nullptr;
+        cpu_rr_quantum_counter = 0;
+        return;
+    }
+    
+    // 2. RR preemption
+    if (cpu_algorithm == ROUND_ROBIN && cpu_rr_quantum_counter <= 0) {
+        ready_queue.push_back(cpu_current);
+        cpu_current = nullptr;
+        cpu_rr_quantum_counter = quantum;
+        return;
+    }
+}
+\end{lstlisting}
+
+Khi quantum RR hết (đếm ngược về 0) và CPU burst chưa kết thúc, tiến trình bị đẩy trở lại cuối ready queue.
+
+\subsection{Preemption trong SRTN}
+
+\begin{lstlisting}
+void Scheduler::checkSRTNPreemption() {
+    if (cpu_algorithm != SRTN) return;
+    if (!cpu_current || ready_queue.empty()) return;
+    
+    int current_rem = cpu_current->getRemainingCPUTotal();
+    
+    for (size_t i = 0; i < ready_queue.size(); ++i) {
+        int rem = ready_queue[i]->getRemainingCPUTotal();
+        if (rem < current_rem) {
+            // Preempt!
+            ready_queue.push_back(cpu_current);
+            cpu_current = nullptr;
+            return;
+        }
+    }
+}
+\end{lstlisting}
+
+Việc so sánh sử dụng \code{getRemainingCPUTotal()} (tổng thời gian CPU còn lại của tất cả các CPU burst trong tương lai) thay vì chỉ burst hiện tại. Đây là kết quả sửa lỗi BUG-2.
+
+\section{Các bug đã phát hiện và sửa}
+
+Trong quá trình phát triển, 7 bug đã được phát hiện và sửa:
+
+\begingroup
+\renewcommand{\code}[1]{\texttt{\hyphenchar\font=45\relax#1}}
+\begin{longtable}{|p{2cm}|>{\raggedright}p{4cm}|>{\raggedright\hyphenchar\font=45}p{4cm}|}
+\hline
+\textbf{Bug} & \textbf{Mô tả} & \textbf{Cách sửa} \\
+\hline
+\endhead
+BUG-1 & CPU off-by-one: \code{processCPU()} chạy trước \code{recordGantt()} & Đổi thứ tự loop, \linebreak[4]\code{markCompletion(current\_time + 1)} \\
+\hline
+BUG-2 & SRTN so sánh \code{currentBurst.remaining} thay vì \linebreak[4]\code{getRemainingCPUTotal()} & Dùng \code{getRemainingCPUTotal()} cho cả 2 vế \\
+\hline
+BUG-3 & \code{markCompletion} không đồng nhất giữa CPU và Resource path & Cả 2 đều dùng \code{current\_time + 1} \\
+\hline
+BUG-4 & RR quantum bị +1 tick & Tự động sửa cùng BUG-1 \\
+\hline
+BUG-5 & Idle tick thừa ở cuối simulation & Chuyển \linebreak[4]\code{isSimulationFinished()} lên đầu loop \\
+\hline
+BUG-8 & Memory leak khi exception & Dùng \code{unique\_ptr} thay \code{new}/\code{delete} \\
+\hline
+BUG-R1 & Resource off-by-one: ghi Gantt sai thứ tự & Ghi Gantt trước decrement \\
+\hline
+\end{longtable}
+\endgroup

@@ -1,0 +1,57 @@
+\chapter{Tổng quan đề tài}
+
+\section{Giới thiệu bài toán điều phối tiến trình}
+
+Trong hệ điều hành hiện đại, CPU là tài nguyên quan trọng nhất và cần được quản lý một cách hiệu quả. Điều phối tiến trình (process scheduling) là cơ chế mà hệ điều hành sử dụng để quyết định tiến trình nào sẽ được cấp CPU tại một thời điểm nhất định. Mục tiêu của điều phối tiến trình là tối ưu hóa hiệu suất hệ thống thông qua các chỉ số như thời gian đáp ứng (response time), thời gian chờ (waiting time), thời gian quay vòng (turnaround time) và mức độ sử dụng tài nguyên (utilization).
+
+Có nhiều thuật toán điều phối khác nhau, mỗi thuật toán phù hợp với một loại hệ thống và mục tiêu thiết kế riêng:
+\begin{itemize}
+    \item \textbf{FCFS (First-Come, First-Served):} Thuật toán đơn giản nhất, tiến trình đến trước được phục vụ trước.
+    \item \textbf{RR (Round Robin):} Mỗi tiến trình được cấp CPU trong một khoảng thời gian cố định (quantum), đảm bảo tính công bằng.
+    \item \textbf{SJF (Shortest Job First):} Tiến trình có tổng thời gian CPU ngắn nhất được ưu tiên thực thi trước.
+    \item \textbf{SRTN (Shortest Remaining Time Next):} Biến thể preemptive của SJF, tiến trình có thời gian CPU còn lại ngắn nhất được ưu tiên.
+\end{itemize}
+
+Ngoài CPU, các tài nguyên khác như thiết bị nhập/xuất, bộ nhớ dùng chung cũng cần được điều phối. Đồ án này mô phỏng một hệ thống có một CPU và một tài nguyên dùng chung R (Resource), nơi tài nguyên R được điều phối theo cơ chế FCFS.
+
+\section{Mục tiêu đồ án}
+
+Đồ án nhằm các mục tiêu sau:
+
+\begin{enumerate}
+    \item \textbf{Xây dựng chương trình mô phỏng} hoạt động điều phối tiến trình với 4 thuật toán: FCFS, Round Robin, SJF và SRTN.
+    \item \textbf{Hỗ trợ tài nguyên dùng chung R:} Mỗi tiến trình có thể yêu cầu CPU và tài nguyên R nhiều lần, xen kẽ theo chu kỳ CPU-R.
+    \item \textbf{Xuất biểu đồ Gantt:} Hiển thị trực quan thứ tự thực thi trên CPU và tài nguyên R.
+    \item \textbf{Phân tích hiệu năng:} Tính toán các chỉ số response time, waiting time, turnaround time và utilization cho mỗi thuật toán.
+    \item \textbf{Giao diện trực quan:} Cung cấp chế độ TUI (Terminal User Interface) để quan sát quá trình mô phỏng theo thời gian thực.
+\end{enumerate}
+
+\section{Phạm vi và giới hạn}
+
+\subsection{Phạm vi}
+\begin{itemize}
+    \item Hệ thống mô phỏng hoạt động ở mức độ rời rạc (discrete-time simulation), mỗi đơn vị thời gian là một tick.
+    \item Hỗ trợ đầy đủ 4 thuật toán điều phối CPU.
+    \item Hỗ trợ 1 tài nguyên R với cơ chế FCFS.
+    \item Đầu vào là file văn bản với cấu trúc đơn giản, đầu ra là biểu đồ Gantt.
+\end{itemize}
+
+\subsection{Giới hạn}
+\begin{itemize}
+    \item Chưa hỗ trợ các thuật toán nâng cao như MLFQ (Multi-Level Feedback Queue) hay Priority Scheduling.
+    \item Chỉ mô phỏng một tài nguyên R duy nhất.
+    \item Chưa tính đến overhead của context-switch.
+    \item Chưa có cơ chế phát hiện starvation cho các thuật toán SJF và SRTN.
+\end{itemize}
+
+\section{Cấu trúc báo cáo}
+
+Báo cáo được tổ chức thành 6 chương:
+\begin{itemize}
+    \item \textbf{Chương 1 - Tổng quan đề tài:} Giới thiệu bài toán, mục tiêu và phạm vi.
+    \item \textbf{Chương 2 - Cơ sở lý thuyết:} Trình bày các khái niệm nền tảng về điều phối tiến trình và các thuật toán.
+    \item \textbf{Chương 3 - Phân tích và thiết kế:} Mô tả kiến trúc, các lớp và mối quan hệ giữa chúng.
+    \item \textbf{Chương 4 - Giải thích cài đặt:} Đi sâu vào chi tiết triển khai các thành phần chính.
+    \item \textbf{Chương 5 - Kết quả thực nghiệm:} Trình bày kết quả chạy test với các bộ dữ liệu mẫu.
+    \item \textbf{Chương 6 - Kết luận:} Đánh giá kết quả đạt được và hướng phát triển.
+\end{itemize}

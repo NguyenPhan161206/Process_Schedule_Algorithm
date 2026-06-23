@@ -1,0 +1,181 @@
+\chapter{Cơ sở lý thuyết}
+
+\section{Khái niệm tiến trình}
+
+Tiến trình (process) là một chương trình đang trong quá trình thực thi. Mỗi tiến trình trong hệ điều hành được quản lý thông qua một khối dữ liệu gọi là Process Control Block (PCB), chứa các thông tin như:
+\begin{itemize}
+    \item Process ID (PID): định danh duy nhất của tiến trình.
+    \item Trạng thái (state): new, ready, running, waiting, terminated.
+    \item Program Counter: địa chỉ lệnh tiếp theo sẽ thực thi.
+    \item CPU registers: các thanh ghi cần lưu lại khi chuyển đổi ngữ cảnh.
+    \item Thông tin điều phối: độ ưu tiên, thời gian chờ, thời gian CPU đã dùng.
+\end{itemize}
+
+Trong mô hình điều phối, mỗi tiến trình luân phiên thực hiện các chu kỳ CPU burst và I/O burst (hoặc Resource burst). Một CPU burst là khoảng thời gian tiến trình sử dụng CPU để tính toán, trong khi Resource burst là khoảng thời gian tiến trình truy cập tài nguyên (như thiết bị nhập/xuất, bộ nhớ dùng chung).
+
+\begin{figure}[h]
+\centering
+\begin{tikzpicture}[node distance=0.5cm]
+\tikzstyle{box}=[rectangle, draw, minimum width=1.8cm, minimum height=0.8cm, rounded corners]
+\tikzstyle{cpu}=[box, fill=blue!20]
+\tikzstyle{res}=[box, fill=green!20]
+
+\node[cpu] (c1) {CPU 5};
+\node[res, right=0.3cm of c1] (r1) {R 2};
+\node[cpu, right=0.3cm of r1] (c2) {CPU 3};
+\node[res, right=0.3cm of c2] (r2) {R 1};
+\node[cpu, right=0.3cm of r2] (c3) {CPU 4};
+
+\draw[->, thick] (c1) -- (r1);
+\draw[->, thick] (r1) -- (c2);
+\draw[->, thick] (c2) -- (r2);
+\draw[->, thick] (r2) -- (c3);
+
+\node[below=0.3cm of c1] {\small tick 0--5};
+\node[below=0.3cm of r1] {\small tick 5--7};
+\node[below=0.3cm of c2] {\small tick 7--10};
+\node[below=0.3cm of r2] {\small tick 10--11};
+\node[below=0.3cm of c3] {\small tick 11--15};
+\end{tikzpicture}
+\caption{Ví dụ chu kỳ CPU-R của một tiến trình}
+\label{fig:cpu-r-cycle}
+\end{figure}
+
+\section{Các thuật toán điều phối CPU}
+
+\subsection{FCFS (First-Come, First-Served)}
+
+FCFS là thuật toán điều phối đơn giản nhất. Tiến trình nào đến trước sẽ được phục vụ trước. Thuật toán này hoạt động theo cơ chế non-preemptive: một khi tiến trình đã được cấp CPU, nó sẽ giữ CPU cho đến khi kết thúc CPU burst hiện tại hoặc tự nguyện nhả CPU để chuyển sang tài nguyên R.
+
+\begin{quote}
+\textbf{FCFS Scheduling}\\
+Input: Ready queue $Q$\\
+Output: Index of selected process\\
+\begin{verbatim}
+if Q is not empty:
+    return 0   // Pick first (oldest) process
+return -1      // No process to run
+\end{verbatim}
+\end{quote}
+
+\textbf{Ưu điểm:} Đơn giản, dễ cài đặt.
+\textbf{Nhược điểm:} Hiệu ứng convoy -- tiến trình CPU-bound dài làm chậm các tiến trình I/O-bound ngắn phía sau.
+
+\subsection{Round Robin (RR)}
+
+Round Robin là thuật toán preemptive, mỗi tiến trình được cấp CPU trong một khoảng thời gian cố định gọi là quantum (thường 10--100ms). Nếu tiến trình không hoàn thành CPU burst trong quantum đó, nó bị preempt và đưa trở lại cuối hàng đợi ready.
+
+\begin{quote}
+\textbf{Round Robin Scheduling (quantum $q$)}\\
+Input: Ready queue $Q$, current process $P$, quantum counter $c$\\
+Output: Next process for CPU\\
+\begin{verbatim}
+if P is null and Q is not empty:
+    return 0              // Pick first in queue
+if P is running and c >= q:
+    PREEMPT(P)             // Move P back to Q
+if P is null and Q not empty:
+    return 0              // Pick next from queue
+\end{verbatim}
+\end{quote}
+
+\textbf{Ưu điểm:} Công bằng, không bị starvation, phù hợp với hệ thống time-sharing.
+\textbf{Nhược điểm:} Hiệu suất phụ thuộc nhiều vào quantum -- quantum quá nhỏ gây nhiều context-switch, quantum quá lớn làm RR trở thành FCFS.
+
+\subsection{SJF (Shortest Job First -- Non-Preemptive)}
+
+SJF chọn tiến trình có tổng thời gian CPU burst ngắn nhất trong hàng đợi ready để thực thi. Đây là thuật toán non-preemptive: một khi tiến trình được chọn, nó chạy cho đến khi kết thúc CPU burst hoặc tự nguyện nhả CPU.
+
+\begin{quote}
+\textbf{SJF Scheduling (Non-Preemptive)}\\
+Input: Ready queue $Q$\\
+Output: Index of process with shortest remaining CPU\\
+\begin{verbatim}
+best_idx = 0
+best_time = Q[0].getRemainingCPUTotal()
+for i = 1 to |Q|-1:
+    t = Q[i].getRemainingCPUTotal()
+    if t < best_time:
+        best_idx = i
+        best_time = t
+return best_idx
+\end{verbatim}
+\end{quote}
+
+\textbf{Ưu điểm:} Tối ưu thời gian chờ trung bình (minimizes average waiting time).
+\textbf{Nhược điểm:} Có thể gây starvation cho tiến trình có burst dài; khó dự đoán độ dài CPU burst trong thực tế.
+
+\subsection{SRTN (Shortest Remaining Time Next -- Preemptive)}
+
+SRTN là phiên bản preemptive của SJF. Tại mỗi thời điểm, nếu có một tiến trình trong hàng đợi ready có tổng thời gian CPU còn lại nhỏ hơn tiến trình đang chạy, tiến trình đang chạy sẽ bị preempt.
+
+\begin{quote}
+\textbf{SRTN Scheduling (Preemptive)}\\
+Input: Ready queue $Q$, current process $P$\\
+Output: Next process for CPU\\
+\begin{verbatim}
+if P is null and Q is not empty:
+    return findShortest(Q)
+if P is running and Q is not empty:
+    shortest = findShortest(Q)
+    if Q[shortest].getRemainingCPUTotal()
+         < P.getRemainingCPUTotal():
+        PREEMPT(P)
+        return shortest
+\end{verbatim}
+\end{quote}
+
+\textbf{Ưu điểm:} Tối ưu thời gian chờ trung bình hơn SJF nhờ tính preemptive.
+\textbf{Nhược điểm:} Càng dễ gây starvation hơn SJF; chi phí tính toán và preemption cao hơn.
+
+\section{Bài toán tài nguyên dùng chung}
+
+Trong hệ thống thực, tiến trình không chỉ sử dụng CPU mà còn cần truy cập các tài nguyên khác như thiết bị nhập/xuất, bộ nhớ dùng chung, file, v.v. Đồ án này mô hình hóa một tài nguyên dùng chung R với cơ chế điều phối FCFS.
+
+Khi một tiến trình hoàn thành CPU burst và burst tiếp theo là Resource R, nó được đưa vào hàng đợi resource. Resource R chỉ phục vụ một tiến trình tại một thời điểm. Khi tiến trình hoàn thành Resource burst, nó quay trở lại hàng đợi ready để tiếp tục cạnh tranh CPU.
+
+Điều đặc biệt là CPU và Resource R hoạt động \textbf{độc lập}: một tiến trình có thể sử dụng Resource R trong khi tiến trình khác đang sử dụng CPU. Điều này phản ánh đúng kiến trúc của hệ thống thực nơi CPU và thiết bị I/O có thể hoạt động song song.
+
+\section{Các chỉ số đánh giá hiệu năng}
+
+\subsection{Các chỉ số trên từng tiến trình}
+
+\begin{itemize}
+    \item \textbf{Response Time ($RT_i$):} Thời gian từ khi tiến trình vào ready queue lần đầu đến khi được cấp CPU lần đầu tiên.
+    \begin{equation}
+        RT_i = \text{first\_response\_time}_i - \text{arrival\_time}_i
+    \end{equation}
+    
+    \item \textbf{Waiting Time ($WT_i$):} Tổng thời gian tiến trình ở trong ready queue (chờ CPU).
+    \begin{equation}
+        WT_i = \sum \text{(thời gian chờ trong ready queue)}
+    \end{equation}
+    
+    \item \textbf{Turnaround Time ($TAT_i$):} Thời gian từ khi tiến trình đến hệ thống đến khi hoàn thành.
+    \begin{equation}
+        TAT_i = \text{completion\_time}_i - \text{arrival\_time}_i
+    \end{equation}
+    
+    \item \textbf{Mối quan hệ:} $TAT_i = WT_i + \text{(tổng CPU burst)} + \text{(tổng Resource burst)}$
+\end{itemize}
+
+\subsection{Các chỉ số hệ thống}
+
+\begin{itemize}
+    \item \textbf{CPU Utilization:} Phần trăm thời gian CPU hoạt động (không idle).
+    \begin{equation}
+        \text{CPU\_Util} = \left(1 - \frac{\text{total\_cpu\_idle\_time}}{\text{total\_simulation\_time}}\right) \times 100\%
+    \end{equation}
+    
+    \item \textbf{Resource Utilization:} Phần trăm thời gian Resource R hoạt động.
+    \begin{equation}
+        \text{R\_Util} = \left(1 - \frac{\text{total\_res\_idle\_time}}{\text{total\_simulation\_time}}\right) \times 100\%
+    \end{equation}
+    
+    \item \textbf{Trung bình hệ thống:}
+    \begin{align}
+        \overline{RT} &= \frac{1}{N} \sum_{i=1}^{N} RT_i \\
+        \overline{WT} &= \frac{1}{N} \sum_{i=1}^{N} WT_i \\
+        \overline{TAT} &= \frac{1}{N} \sum_{i=1}^{N} TAT_i
+    \end{align}
+\end{itemize}

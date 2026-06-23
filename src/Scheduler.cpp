@@ -15,10 +15,12 @@ Scheduler::Scheduler(std::vector<Process> procs, ISchedulingAlgorithm* algo)
     , visualizer(nullptr)
     , next_arrival_idx(0)
 {
-    is_rr = (dynamic_cast<RoundRobinScheduler*>(algorithm) != nullptr);
-    is_srtn = (dynamic_cast<SRTNScheduler*>(algorithm) != nullptr);
+    is_rr = (dynamic_cast<RoundRobinScheduler*>(algorithm) != nullptr); // Check if the algorithm is Round Robin
+    // (dynamic_cast<RoundRobinScheduler*>(algorithm) != nullptr) nghĩa là kiểm tra xem con trỏ algorithm có thể được chuyển đổi sang kiểu RoundRobinScheduler hay không. Nếu có thể, điều đó có nghĩa là thuật toán lập lịch hiện tại là Round Robin, và is_rr sẽ được đặt thành true. Ngược lại, nếu không thể chuyển đổi, is_rr sẽ là false.
+    is_srtn = (dynamic_cast<SRTNScheduler*>(algorithm) != nullptr); // Check if the algorithm is SRTN
     if (is_rr) {
-        rr_quantum = static_cast<RoundRobinScheduler*>(algorithm)->quantum;
+        rr_quantum = static_cast<RoundRobinScheduler*>(algorithm)->quantum; 
+        // static_cast là một phép ép kiểu tĩnh trong C++. Nó được sử dụng để chuyển đổi con trỏ algorithm từ kiểu ISchedulingAlgorithm* sang kiểu RoundRobinScheduler*. Sau đó, nó truy cập thành viên quantum của đối tượng RoundRobinScheduler để lấy giá trị quantum và gán cho rr_quantum.
         cpu_rr_quantum_counter = rr_quantum;
     }
 }

@@ -1,0 +1,137 @@
+@startuml
+skinparam defaultFontName DejaVu Sans
+skinparam class {
+  BorderColor black
+  BackgroundColor #EEF5FF
+  ArrowColor black
+}
+
+!define SEPARATOR ..
+
+interface ISchedulingAlgorithm {
+  + {abstract} pickNext(readyQueue, time): int
+}
+
+class FCFSScheduler {
+  + pickNext(): int
+}
+
+class RoundRobinScheduler {
+  - quantum: int
+  + pickNext(): int
+}
+
+class SJFScheduler {
+  + pickNext(): int
+}
+
+class SRTNScheduler {
+  + pickNext(): int
+}
+
+class Scheduler {
+  - processes: vector<Process>
+  - ready_queue: deque<Process*>
+  - cpu_current: Process*
+  - cpu_current_burst_remaining: int
+  - resource: Resource
+  - algorithm: ISchedulingAlgorithm*
+  - cpu_gantt: vector<int>
+  - total_cpu_idle_time: int
+  SEPARATOR
+  + runSimulation(): void
+  - handleNewArrivals(): void
+  - processCPU(): void
+  - processResource(): void
+  - resolveConflict(): void
+  - checkSRTNPreemption(): void
+  - pickNextCPUProcess(): void
+  - recordGantt(): void
+  - isSimulationFinished(): bool
+  - notifyVisualizer(): void
+}
+
+class Resource {
+  - res_queue: queue<Process*>
+  - released_queue: queue<Process*>
+  - current_user: Process*
+  - remaining_time: int
+  - is_busy: bool
+  - gantt_history: vector<int>
+  - total_idle_time: int
+  SEPARATOR
+  + tick(): void
+  + addRequest(Process*): void
+  + popReleased(): Process*
+}
+
+class Process {
+  - pid: int
+  - arrival_time: int
+  - bursts: vector<TaskBurst>
+  - current_burst_idx: int
+  - completion_time: int
+  - first_response_time: int
+  - total_waiting_time: int
+  SEPARATOR
+  + getRemainingCPUTotal(): int
+  + advanceBurst(): void
+  + markCompletion(time): void
+  + markFirstResponse(time): void
+  + addWaitingTime(n): void
+  + isFinished(): bool
+  + getCurrentBurst(): TaskBurst&
+}
+
+class TaskBurst {
+  - type: BurstType {CPU, RESOURCE}
+  - duration: int
+  - remaining: int
+}
+
+enum BurstType {
+  CPU
+  RESOURCE
+}
+
+class Visualizer {
+  - enabled: bool
+  SEPARATOR
+  + render(SystemSnapshot): void
+  + getEnabled(): bool
+}
+
+class Analytics {
+  SEPARATOR
+  + printReport(): void
+  - calculateProcessMetrics(): void
+  - calculateSystemMetrics(): void
+}
+
+class SystemSnapshot {
+  - cpu_pid: int
+  - cpu_burst_remaining: int
+  - res_pid: int
+  - ready_queue: vector<int>
+  - res_queue: vector<int>
+  - cpu_gantt: vector<int>
+  - res_gantt: vector<int>
+  - current_time: int
+}
+
+ISchedulingAlgorithm <|-- FCFSScheduler
+ISchedulingAlgorithm <|-- RoundRobinScheduler
+ISchedulingAlgorithm <|-- SJFScheduler
+ISchedulingAlgorithm <|-- SRTNScheduler
+
+Scheduler *-- Resource : owns
+Scheduler *-- "1" ISchedulingAlgorithm : uses
+Scheduler *-- "many" Process : manages
+Scheduler ..> Visualizer : notifies
+
+Process *-- "many" TaskBurst : contains
+Process ..> BurstType : uses
+
+Visualizer ..> SystemSnapshot : renders
+
+@enduml

@@ -1,6 +1,8 @@
 #ifndef ALGORITHMS_HPP
 #define ALGORITHMS_HPP
 
+// Khai báo thuật toán và kế thừa thuật toán
+
 #include "ISchedulingAlgorithm.hpp"
 
 class FCFSScheduler : public ISchedulingAlgorithm {

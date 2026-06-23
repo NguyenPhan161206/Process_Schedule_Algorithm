@@ -1,0 +1,39 @@
+\chapter{Kết luận}
+
+\section{Kết quả đạt được}
+
+Đồ án đã hoàn thành các mục tiêu đề ra:
+
+\begin{enumerate}
+    \item \textbf{Xây dựng thành công chương trình mô phỏng} điều phối tiến trình với 4 thuật toán FCFS, Round Robin, SJF và SRTN.
+    \item \textbf{Hỗ trợ tài nguyên dùng chung R} với cơ chế FCFS, cho phép mô phỏng các kịch bản CPU-R đan xen.
+    \item \textbf{Xuất biểu đồ Gantt} cho cả CPU và tài nguyên R, giúp trực quan hóa quá trình điều phối.
+    \item \textbf{Phân tích hiệu năng} với đầy đủ các chỉ số response time, waiting time, turnaround time và utilization.
+    \item \textbf{Giao diện TUI} real-time cho phép quan sát quá trình mô phỏng theo từng tick.
+    \item \textbf{Phát hiện và sửa 7 bug}, đảm bảo tính chính xác của chương trình.
+\end{enumerate}
+
+\section{Hạn chế}
+
+Bên cạnh những kết quả đạt được, đồ án còn một số hạn chế:
+
+\begin{itemize}
+    \item Chỉ hỗ trợ một tài nguyên R duy nhất, chưa mở rộng được cho nhiều tài nguyên.
+    \item Chưa triển khai các thuật toán điều phối nâng cao như MLFQ hay Priority Scheduling.
+    \item Chưa tính đến context-switch overhead -- trong thực tế, mỗi lần chuyển đổi tiến trình tốn một khoảng thời gian nhất định.
+    \item Chưa có cơ chế phát hiện starvation, đặc biệt quan trọng với SJF và SRTN.
+    \item Các thành viên dữ liệu trong hầu hết các lớp đều là public, chưa tuân thủ nghiêm ngặt tính đóng gói.
+\end{itemize}
+
+\section{Hướng phát triển}
+
+Trong tương lai, chương trình có thể được mở rộng theo các hướng sau:
+
+\begin{itemize}
+    \item \textbf{MLFQ (Multi-Level Feedback Queue):} Thuật toán điều phối được sử dụng trong nhiều hệ điều hành hiện đại (BSD, Solaris), cho phép tiến trình di chuyển giữa các queue có độ ưu tiên khác nhau dựa trên hành vi CPU-bound hay I/O-bound.
+    \item \textbf{Priority Scheduling:} Thêm trường độ ưu tiên vào tiến trình, cho phép điều phối theo mức độ ưu tiên.
+    \item \textbf{Chế độ batch:} Chạy tự động nhiều test case và xuất kết quả dạng CSV/JSON để so sánh.
+    \item \textbf{Starvation detection:} Cảnh báo khi một tiến trình chờ quá lâu (vượt ngưỡng).
+    \item \textbf{Context-switch overhead:} Thêm tham số thời gian chuyển đổi ngữ cảnh để mô phỏng thực tế hơn.
+    \item \textbf{Cải thiện chất lượng mã nguồn:} Encapsulation, validation đầu vào, kiểm tra isatty cho ANSI codes, constants thay magic strings.
+\end{itemize}

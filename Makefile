@@ -7,7 +7,7 @@ OBJDIR = build/obj
 SRCS = $(wildcard $(SRCDIR)/*.cpp)
 OBJS = $(patsubst $(SRCDIR)/%.cpp, $(OBJDIR)/%.o, $(SRCS))
 
-.PHONY: all clean
+.PHONY: all clean report
 
 all: $(TARGET)
 
@@ -20,5 +20,11 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp | $(OBJDIR)
 $(OBJDIR):
 	mkdir -p $(OBJDIR)
 
+report:
+	cd report && xelatex main.tex && xelatex main.tex
+
 clean:
 	rm -rf $(OBJDIR) $(TARGET)
+
+clean-report:
+	rm -f report/main.aux report/main.log report/main.out report/main.toc report/main.lof report/main.lot report/main.pdf
